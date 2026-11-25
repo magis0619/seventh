@@ -18,6 +18,14 @@ npm run sim      # バランス検証用の自動プレイ（scripts/sim.test.ts
 
 PCのキー操作: `Space` / `Enter` で 進む・攻撃・スキップ、`Esc` で 戻る・逃げる。ドロップ画面は `1` `2`（装備）、`s`（倉庫）、`d`（捨てる）。
 
+## GitHub Pages で公開
+
+`.github/workflows/pages.yml` が `main` への push（または Actions 画面から手動実行）でテスト → ビルド → デプロイします。
+
+1. リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にする（初回のみ）
+2. `main` に push する（または Actions → Deploy to GitHub Pages → Run workflow）
+3. `https://<ユーザー名>.github.io/seventh/` で開ける（デバッグは `?debug=1`）
+
 ## 構成
 
 ```
