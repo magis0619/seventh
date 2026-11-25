@@ -35,6 +35,8 @@ export class Game {
   busy = false;
   /** シーン固有のキーボード操作 */
   hotkeys: Record<string, () => void> = {};
+  /** busy 中でも hotkeys を受け付けるか（スキル演出のスキップ用） */
+  busyHotkeys = false;
   /** 戦闘ログ（HTML行） */
   battleLines: string[] = [];
   /** スキル演出済みの戦闘 */
@@ -60,7 +62,7 @@ export class Game {
     window.addEventListener('keydown', (e) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'SELECT') return;
       const fn = this.hotkeys[e.key];
-      if (fn && !this.busy) {
+      if (fn && (!this.busy || this.busyHotkeys)) {
         e.preventDefault();
         fn();
       }
@@ -102,6 +104,7 @@ export class Game {
     this.corridor?.destroy();
     this.corridor = null;
     this.hotkeys = {};
+    this.busyHotkeys = false;
     switch (this.scene) {
       case 'town':
         renderTown(this);

@@ -30,10 +30,10 @@ function predictHtml(g: Game, b: BattleState): string {
   const c = combatant(g.profile, g.run!);
   const dmg = predictPlayerDamage(b, c);
   const taken = predictEnemyDamage(b, c);
-  const turns = Math.ceil(b.enemy.hp / Math.max(1, dmg));
+  const turns = b.enemy.hp > 0 ? formatNum(Math.ceil(b.enemy.hp / Math.max(1, dmg))) : '—';
   const survive = Math.ceil(g.run!.hp / taken);
   return `<div class="predict">
-    <div><div class="label">与ダメ予測 / ターン</div><div class="val">${formatNum(dmg)}</div><div class="label">撃破まで ${formatNum(turns)} ターン</div></div>
+    <div><div class="label">与ダメ予測 / ターン</div><div class="val">${formatNum(dmg)}</div><div class="label">撃破まで ${turns} ターン</div></div>
     <div><div class="label">被ダメ予測 / 回</div><div class="val ${survive <= 2 ? 'bad' : ''}">${formatNum(taken)}</div><div class="label">あと ${formatNum(survive)} 発で倒れる</div></div>
     <div><div class="label">逃走成功率</div><div class="val">${formatPercent(currentEscapeChance(b, c))}</div><div class="label">${b.enemy.isBoss ? 'ボス戦は固定' : '速さの差で変化'}</div></div>
   </div>`;
@@ -115,6 +115,7 @@ async function animateSkillPhase(g: Game, b: BattleState) {
   const skipBtn = g.root.querySelector<HTMLButtonElement>('#skip');
   skipBtn?.addEventListener('click', () => (skip = true));
   g.hotkeys = { ' ': () => (skip = true), Enter: () => (skip = true) };
+  g.busyHotkeys = true;
   const statsEl = g.root.querySelector('#stats');
   const drawStats = (flash: string[]) => {
     if (!statsEl) return;
@@ -130,6 +131,8 @@ async function animateSkillPhase(g: Game, b: BattleState) {
       if (c.key === 'battleMul') mul = c.after;
       else display[c.key] = c.after;
     }
+    // 連鎖上限は行数が膨らむので本ログでは省略（デバッグの全文ログには残る）
+    if (ev.type === 'depth_limit') continue;
     // 早送り中は DOM 更新を間引く
     const fast = skip || i >= F.fastForwardAfter;
     if (skip) {
@@ -153,10 +156,13 @@ async function animateSkillPhase(g: Game, b: BattleState) {
       el.scrollTop = el.scrollHeight;
     }
   }
+  const limits = b.phase.events.filter((e) => e.type === 'depth_limit').length;
+  if (limits) appendLog(g, `（連鎖上限で止まった再発動 ${limits}回）`, 'sys');
   if (b.phase.truncated) appendLog(g, '（発動回数の上限で打ち切り）', 'sys');
   appendLog(g, `— 戦闘開始 — ${b.phase.activations}回発動`, 'sys');
   g.animatedBattle = b;
   g.busy = false;
+  g.busyHotkeys = false;
   g.render();
 }
 
