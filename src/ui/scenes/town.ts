@@ -58,8 +58,17 @@ export function renderTown(g: Game) {
     <div class="topbar"><h1>シナジーの塔</h1><span class="sub">最高到達 ${p.bestFloor}F</span><span class="spacer"></span>
       <span class="dim">${g.debug ? 'DEBUG' : ''}</span></div>
     ${g.townMessage ? `<div class="panel" style="margin-bottom:10px">${esc(g.townMessage)}</div>` : ''}
-    <div class="cols town">
-      <div class="panel">
+    <nav class="tabs-bar">${(
+      [
+        ['tower', '出発'],
+        ['equip', '装備'],
+        ['storage', `倉庫 ${p.storage.length}/${cap}`],
+      ] as const
+    )
+      .map(([k, l]) => `<button data-tab="${k}" class="${g.townTab === k ? 'active' : ''}">${l}</button>`)
+      .join('')}</nav>
+    <div class="cols town tab-${g.townTab}">
+      <div class="panel pane-equip">
         <h2>装備</h2>
         ${loadoutHtml}
         <h2 style="margin-top:10px">出発時のステータス</h2>
@@ -67,11 +76,11 @@ export function renderTown(g: Game) {
         ${tagSummary(p.loadout)}
         <div class="dim" style="font-size:12px;margin-top:8px">スキルで伸びた値はラン中のみ有効。町に戻るとリセットされます。</div>
       </div>
-      <div class="panel">
+      <div class="panel pane-storage">
         <h2>倉庫 ${p.storage.length} / ${cap}</h2>
         <div class="storage-grid">${storageHtml}</div>
       </div>
-      <div class="panel">
+      <div class="panel pane-tower">
         <h2>塔を選ぶ</h2>
         ${towersHtml}
         <div class="dim" style="font-size:12px">
@@ -82,6 +91,12 @@ export function renderTown(g: Game) {
       </div>
     </div>`;
 
+  g.root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) =>
+    b.addEventListener('click', () => {
+      g.townTab = b.dataset.tab as Game['townTab'];
+      g.render();
+    }),
+  );
   g.root.querySelectorAll<HTMLButtonElement>('[data-unequip]').forEach((b) =>
     b.addEventListener('click', () => {
       const s = Number(b.dataset.unequip) as SlotIndex;

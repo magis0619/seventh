@@ -11,7 +11,7 @@ import { skillEventText } from './components';
 import { formatNum } from './format';
 import type { Game } from './game';
 
-let collapsed = false;
+let collapsed = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
 
 function skillSelect(i: number): string {
   return `<select data-dbg-skill="${i}"><option value="">—</option>${ALL_SKILL_IDS.map(

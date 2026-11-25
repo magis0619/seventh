@@ -19,8 +19,8 @@
   --tag-守: #8bd17c;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', system-ui, sans-serif; font-size: 14px; }
-button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+html, body { margin: 0; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; background: var(--bg); color: var(--text); font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', system-ui, sans-serif; font-size: 14px; }
+button { touch-action: manipulation; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: .4; cursor: default; }
 button.primary { background: #2b5d3c; border-color: #3f8f5b; font-weight: bold; }
@@ -96,6 +96,7 @@ h2 { font-size: 16px; color: var(--dim); font-weight: normal; }
 .view .overlay { position: absolute; inset: 0; pointer-events: none; }
 .view .hud { position: absolute; left: 10px; top: 8px; text-shadow: 0 1px 2px #000; }
 .view .hud .floor { font-size: 22px; font-weight: bold; }
+.view .hud .max { font-size: 13px; }
 .view .msg { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-size: 18px; text-shadow: 0 2px 4px #000; }
 .dmgpop { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); font-weight: 900; color: #fff; text-shadow: 0 0 6px #f80, 0 3px 0 #000; animation: pop 0.9s ease-out forwards; white-space: nowrap; }
 .dmgpop.crit { color: var(--accent); }
@@ -143,3 +144,105 @@ h2 { font-size: 16px; color: var(--dim); font-weight: normal; }
 #debug td, #debug th { border-bottom: 1px solid #333; padding: 2px 4px; text-align: right; }
 #debug .row { margin: 3px 0; }
 #debug.collapsed > :not(.dbg-head) { display: none; }
+
+/* 共通レイアウト部品 */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cards-grid { display: block; }
+.note { text-align: center; font-size: 12px; color: var(--dim); }
+.tabs-bar { display: none; }
+.col-side > * + * { margin-top: 12px; }
+.enemy-box { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: 46%; text-align: center; text-shadow: 0 1px 2px #000; }
+.enemy-box .ename { font-size: 16px; }
+.enemy-box .estat { font-size: 12px; }
+.view .msg { padding: 0 8px; }
+
+/* タッチ端末ではキー表記を隠す */
+@media (hover: none) {
+  .kbd { display: none; }
+}
+
+/* ===== スマホ ===== */
+@media (max-width: 760px) {
+  html, body { font-size: 13px; }
+  #app { padding: 8px 8px calc(96px + env(safe-area-inset-bottom)); }
+  .topbar { margin-bottom: 6px; }
+  .topbar h1 { font-size: 18px; }
+  .panel { padding: 10px; border-radius: 8px; }
+  button { min-height: 40px; }
+  button.big { font-size: 18px; padding: 10px 0; min-width: 0; flex: 1; min-height: 56px; }
+  .card .actions button { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+  select, input { min-height: 36px; font-size: 16px; }
+
+  /* 町: タブで切り替え */
+  .tabs-bar { display: flex; gap: 6px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 4px 0 8px; }
+  .tabs-bar button { flex: 1; }
+  .tabs-bar button.active { border-color: var(--accent); color: var(--accent); background: #2a2614; }
+  .cols.town { grid-template-columns: 1fr; }
+  .cols.town > .panel { display: none; }
+  .cols.town.tab-tower > .pane-tower,
+  .cols.town.tab-equip > .pane-equip,
+  .cols.town.tab-storage > .pane-storage { display: block; }
+  .storage-grid { grid-template-columns: 1fr; }
+  .tower button.primary { min-width: 96px; }
+
+  /* 探索・戦闘: 縦1カラム。並び順を指定し、ボタンは画面下に固定 */
+  .cols.play { display: flex; flex-direction: column; gap: 8px; }
+  .col-main, .col-side { display: contents; }
+  .col-side > * + * { margin-top: 0; }
+  .area-view { order: 1; margin: 0 -8px; }
+  .area-view .view { border-radius: 0; border-left: 0; border-right: 0; }
+  .area-status { order: 2; }
+  .area-predict { order: 3; }
+  .area-cards { order: 4; }
+  .area-log { order: 5; }
+  .area-controls { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: linear-gradient(#0d0f1400, #0d0f14 30%); padding: 14px 10px calc(10px + env(safe-area-inset-bottom)); }
+  .area-controls .controls { margin: 0; gap: 10px; }
+  .area-controls .note { display: none; }
+  .area-controls .banner { margin: 6px 0; flex: 1; }
+
+  .view .hud { left: 8px; top: 6px; }
+  .view .hud .floor { font-size: 18px; }
+  .view .hud .tname { font-size: 11px; }
+  .view .msg { font-size: 14px; bottom: 6px; }
+  .enemy-box { width: 52%; left: auto; right: 6px; transform: none; top: 6px; }
+  .enemy-box .ename { font-size: 13px; }
+  .enemy-box .estat { display: block; font-size: 10px; }
+  .enemy-box .hpbar { height: 10px; }
+  .enemy-box .hptext { font-size: 10px; }
+
+  /* ステータスは3列に詰める */
+  .status .stats { grid-template-columns: repeat(3, auto 1fr); gap: 1px 8px; font-size: 12px; }
+  .status .stats .k { white-space: nowrap; }
+  .tags { flex-wrap: wrap; }
+
+  .predict { margin-top: 0; gap: 6px; }
+  .predict div { padding: 4px; }
+  .predict .val { font-size: 15px; }
+  .predict .label { font-size: 10px; }
+
+  /* 装備は2×2のコンパクト表示 */
+  .cards-panel h2 { display: none; }
+  .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .cards-grid .card { margin: 0; padding: 6px; }
+  .cards-grid .card .name { font-size: 12px; }
+  .cards-grid .card .rarity { display: none; }
+  .cards-grid .card .base { font-size: 11px; gap: 6px; margin: 2px 0; }
+  .cards-grid .card .base .q { display: none; }
+  .cards-grid .skill { font-size: 11px; padding: 2px; gap: 4px; }
+  .cards-grid .skill .kind { display: none; }
+
+  .log { height: 160px; font-size: 12px; }
+
+  /* ドロップ・結果 */
+  .loot { grid-template-columns: 1fr; }
+  .loot-compare .two-col { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+  .banner { font-size: 22px; }
+  .result { margin: 8px auto; }
+
+  /* デバッグ: 下部いっぱいのシート */
+  #debug { left: 4px; right: 4px; width: auto; bottom: calc(88px + env(safe-area-inset-bottom)); max-height: 60vh; }
+  #debug.collapsed { left: auto; width: auto; top: 4px; bottom: auto; padding: 2px 6px; }
+  #debug.collapsed .dbg-head button { min-height: 28px; padding: 2px 8px; }
+  .topbar { padding-right: 110px; }
+}

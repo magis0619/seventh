@@ -2,7 +2,7 @@ import { BALANCE } from '../../data/balance';
 import { advance, retreat } from '../../core/run';
 import { formatNum } from '../format';
 import type { Game } from '../game';
-import { mountCorridor, sidePanel, viewHtml } from './play';
+import { mountCorridor, playLayout, viewHtml } from './play';
 
 function eventMessage(g: Game): string {
   const ev = g.run!.lastEvent;
@@ -25,18 +25,12 @@ function eventMessage(g: Game): string {
 export function renderExplore(g: Game) {
   const run = g.run!;
   const atTop = run.floorCleared && run.floor >= BALANCE.explore.maxFloor;
-  g.root.innerHTML = `
-    <div class="cols play">
-      <div>
-        ${viewHtml(g)}
-        <div class="controls">
-          <button class="big primary" id="go" ${atTop ? 'disabled' : ''}>進む<span class="kbd">[Space]</span></button>
-          <button class="big" id="back">戻る<span class="kbd">[Esc]</span></button>
-        </div>
-        <div class="dim" style="text-align:center;font-size:12px">「戻る」で帰還：今回のランを終え、装備を持ち帰る（HP全快・成長はリセット）</div>
-      </div>
-      ${sidePanel(g)}
-    </div>`;
+  g.root.innerHTML = playLayout(g, {
+    view: viewHtml(g),
+    controls: `<button class="big primary" id="go" ${atTop ? 'disabled' : ''}>進む<span class="kbd">[Space]</span></button>
+      <button class="big" id="back">戻る<span class="kbd">[Esc]</span></button>`,
+    note: '「戻る」で帰還：装備を持ち帰る（HP全快・成長はリセット）',
+  });
   const corridor = mountCorridor(g);
   corridor.setFountain(run.lastEvent.type === 'fountain');
   g.root.querySelector('#msg')!.textContent = eventMessage(g);

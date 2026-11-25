@@ -47,6 +47,8 @@ export class Game {
   lastBattleCache: BattleState | null = null;
   /** ドロップ画面で「外した装備」を扱っているか */
   lootSwapped = false;
+  /** 町のタブ（スマホ表示用） */
+  townTab: 'tower' | 'equip' | 'storage' = 'tower';
   /** 町に表示する一言 */
   townMessage = '';
   /** デバッグ: 次のランのシード（null ならランダム） */

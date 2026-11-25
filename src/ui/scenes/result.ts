@@ -38,7 +38,7 @@ export function renderResult(g: Game) {
       <table>${growth}</table>
       ${
         run.lost.length
-          ? `<h2 style="margin-top:16px" class="bad">失った装備</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${run.lost
+          ? `<h2 style="margin-top:16px" class="bad">失った装備</h2><div class="two-col">${run.lost
               .map((it) => itemCard(it, { compact: true }))
               .join('')}</div>`
           : ''

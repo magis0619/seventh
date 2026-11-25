@@ -6,7 +6,7 @@ import type { BaseStats } from '../../core/types';
 import { esc, hpBar, skillEventText, statsPanel } from '../components';
 import { formatNum, formatPercent, magnitude } from '../format';
 import { wait, type Game } from '../game';
-import { mountCorridor, sidePanel, viewHtml } from './play';
+import { mountCorridor, playLayout, viewHtml } from './play';
 
 interface Fx {
   damage?: number;
@@ -19,9 +19,9 @@ let pendingFx: Fx | null = null;
 
 function enemyPanel(b: BattleState): string {
   const e = b.enemy;
-  return `<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);width:46%;text-align:center;text-shadow:0 1px 2px #000">
-    <div><b style="font-size:16px">${e.isBoss ? '<span class="bad">BOSS</span> ' : ''}${esc(e.name)}</b>
-    <span class="dim" style="font-size:12px">攻撃 ${formatNum(e.atk)} ／ 速さ ${e.spd}</span></div>
+  return `<div class="enemy-box">
+    <div><b class="ename">${e.isBoss ? '<span class="bad">BOSS</span> ' : ''}${esc(e.name)}</b>
+    <span class="dim estat">攻撃 ${formatNum(e.atk)} ／ 速さ ${e.spd}</span></div>
     ${hpBar(e.hp, e.maxHp, 'enemy')}
   </div>`;
 }
@@ -84,12 +84,13 @@ function showFx(g: Game, fx: Fx) {
   };
   if (fx.damage !== undefined) {
     // 桁が増えるほど文字を大きく
-    const size = Math.min(110, 22 + magnitude(fx.damage) * 6);
+    const w = (ov as HTMLElement).clientWidth || 800;
+    const size = Math.min(110, w * 0.15, 22 + magnitude(fx.damage) * 6);
     pop(formatNum(fx.damage), `${fx.crit ? 'crit' : ''} ${fx.levelUp ? 'levelup' : ''}`, size);
     g.corridor?.hurtEnemy();
   }
   if (fx.taken !== undefined) {
-    pop(`-${formatNum(fx.taken)}`, 'taken', 28);
+    pop(`-${formatNum(fx.taken)}`, 'taken', 26);
     const v = g.root.querySelector('#view');
     v?.classList.remove('shake');
     void (v as HTMLElement | null)?.offsetWidth;
@@ -117,6 +118,7 @@ async function animateSkillPhase(g: Game, b: BattleState) {
   g.hotkeys = { ' ': () => (skip = true), Enter: () => (skip = true) };
   g.busyHotkeys = true;
   const statsEl = g.root.querySelector('#stats');
+  const msgEl = g.root.querySelector('#msg');
   const drawStats = (flash: string[]) => {
     if (!statsEl) return;
     statsEl.innerHTML = statsPanel(computeEffective(display, loadout), mul);
@@ -145,6 +147,7 @@ async function animateSkillPhase(g: Game, b: BattleState) {
       lit?.classList.add('lit');
     }
     appendLog(g, esc(skillEventText(ev)), `depth${Math.min(4, ev.depth)}`);
+    if (msgEl) msgEl.textContent = skillEventText(ev);
     drawStats(ev.changes.flatMap((c) => FLASH_KEYS[c.key] ?? []));
     await wait(fast ? F.skillStepFastMs : F.skillStepMs);
     lit?.classList.remove('lit');
@@ -176,25 +179,19 @@ export function renderBattle(g: Game) {
   if (!b) return g.syncScene();
   const finished = b.outcome !== 'ongoing';
   const animating = !finished && g.animatedBattle !== b;
-  g.root.innerHTML = `
-    <div class="cols play">
-      <div>
-        ${viewHtml(g).replace('<div class="msg" id="msg"></div>', `${enemyPanel(b)}<div class="msg" id="msg"></div>`)}
-        ${predictHtml(g, b)}
-        <div class="controls">
-          ${
-            finished
-              ? `<div class="banner ${b.outcome === 'lose' ? 'bad' : 'good'}">${{ win: '勝利！', lose: '敗北…', escaped: '逃走成功', ongoing: '' }[b.outcome]}</div>`
-              : animating
-              ? `<button class="big" id="skip">スキップ<span class="kbd">[Space]</span></button>`
-              : `<button class="big primary" id="atk">攻撃<span class="kbd">[Space]</span></button>
-                 <button class="big" id="run">逃げる<span class="kbd">[Esc]</span></button>`
-          }
-        </div>
-        <div class="log" id="log">${g.battleLines.join('')}</div>
-      </div>
-      ${sidePanel(g, animating ? 1 : b.battleMul)}
-    </div>`;
+  const controls = finished
+    ? `<div class="banner ${b.outcome === 'lose' ? 'bad' : 'good'}">${{ win: '勝利！', lose: '敗北…', escaped: '逃走成功', ongoing: '' }[b.outcome]}</div>`
+    : animating
+      ? `<button class="big" id="skip">スキップ<span class="kbd">[Space]</span></button>`
+      : `<button class="big primary" id="atk">攻撃<span class="kbd">[Space]</span></button>
+         <button class="big" id="run">逃げる<span class="kbd">[Esc]</span></button>`;
+  g.root.innerHTML = playLayout(g, {
+    view: viewHtml(g, enemyPanel(b)),
+    predict: predictHtml(g, b),
+    controls,
+    log: `<div class="log" id="log">${g.battleLines.join('')}</div>`,
+    battleMul: animating ? 1 : b.battleMul,
+  });
   const corridor = mountCorridor(g);
   corridor.setEnemy(b.enemy);
   const logEl = g.root.querySelector('#log')!;

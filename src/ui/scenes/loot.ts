@@ -56,9 +56,9 @@ export function renderLoot(g: Game) {
           </div>
           <div class="dim" style="font-size:12px;margin-top:6px">倉庫へ送った装備は、負けても失いません。${full ? '<br><b class="bad">倉庫がいっぱいです。</b>' : ''}</div>
         </div>
-        <div style="grid-column: span 2">
+        <div class="loot-compare">
           <h2>装備中の${item.kind === 'weapon' ? '武器' : '防具'}と比較</h2>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${slotCards}</div>
+          <div class="two-col">${slotCards}</div>
           <div class="dim" style="font-size:12px">装備すると、外した装備をどうするか（倉庫へ／捨てる）を続けて選びます。スキルの発動順は ${SLOT_LABEL.join(' → ')}、各装備の中は上から。</div>
         </div>
       </div>
