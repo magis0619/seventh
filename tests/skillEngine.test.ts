@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runSkillPhase, countTags, tagMultiplier, flattenSkills } from '../src/core/skillEngine';
+import { runSkillPhase, countTags, tagMultiplier, flattenSkills, summarizePhase } from '../src/core/skillEngine';
 import { createRng } from '../src/core/rng';
 import { computeAttack, createEnemy, playerAttack, startBattle } from '../src/core/battle';
 import { computeEffective } from '../src/core/stats';
@@ -8,7 +8,7 @@ import { fixedRng, item, loadout, stats } from './helpers';
 
 const rng0 = () => fixedRng(0);
 
-describe('スキル24種の効果（初期値: 力2 速さ1 魔力0 防御0 運5 最大HP40）', () => {
+describe('スキル24種の効果（初期値: 力2 速さ1 魔力0 防御0 運5）', () => {
   it('S01 筋トレ: 力 +3', () => {
     expect(runSkillPhase(stats(), loadout(['S01']), rng0()).stats.str).toBe(5);
   });
@@ -26,9 +26,9 @@ describe('スキル24種の効果（初期値: 力2 速さ1 魔力0 防御0 運5
     expect(r.stats.mag).toBe(12);
   });
   it('S04 重撃: 力 + 最大HP × 10%', () => {
-    expect(runSkillPhase(stats(), loadout(['S04']), rng0()).stats.str).toBe(2 + 4);
+    expect(runSkillPhase(stats(), loadout(['S04']), rng0()).stats.str).toBe(2 + Math.floor(BALANCE.player.baseMaxHp * 0.1));
     const armor = item([], { kind: 'armor', hp: 60 });
-    expect(runSkillPhase(stats(), loadout(['S04'], null, armor), rng0()).stats.str).toBe(2 + 10);
+    expect(runSkillPhase(stats(), loadout(['S04'], null, armor), rng0()).stats.str).toBe(2 + Math.floor((BALANCE.player.baseMaxHp + 60) * 0.1));
   });
   it('S05 鍛え直し: 力 + 力 × 8%（切り上げ）', () => {
     expect(runSkillPhase(stats(), loadout(['S05']), rng0()).stats.str).toBe(3);
@@ -297,5 +297,27 @@ describe('§5.7 噛み合いの例: 戦闘5回でステータスが単調増加'
     const { history } = repeat(l, 5, 7);
     expectNonDecreasing(history);
     expectStrict(history, 'str');
+  });
+});
+
+describe('連鎖（シナジー）の判定', () => {
+  it('前のスキルが伸ばした値を次のスキルが使うと連鎖', () => {
+    // 瞑想(魔力+4) → 魔力転換(魔力を力へ) は連鎖
+    const r = runSkillPhase(stats(), loadout(['S07', 'S10']), rng0());
+    expect(r.events[0].chain).toBe(false);
+    expect(r.events[1].chain).toBe(true);
+    expect(r.events[1].chainFrom?.skillId).toBe('S07');
+    expect(r.events[1].source).toBe('mag');
+  });
+  it('自分で伸ばした値を読むだけなら連鎖ではない', () => {
+    const r = runSkillPhase(stats({ mag: 10 }), loadout(['S12', 'S03']), rng0());
+    // 深淵 → 反復(深淵×2)。深淵が自分の伸ばした魔力を読むのは連鎖扱いしない
+    expect(r.events.filter((e) => e.chain)).toHaveLength(0);
+    expect(summarizePhase(r).refires).toBe(2);
+  });
+  it('魔力ループは連鎖が複数回起きる', () => {
+    const r = runSkillPhase(stats({ str: 50 }), loadout(['S07', 'S12', 'S11'], ['S10']), rng0());
+    // 深淵(瞑想の魔力) / 魔力転換(学者の魔力) が連鎖
+    expect(summarizePhase(r).chains).toBeGreaterThanOrEqual(2);
   });
 });

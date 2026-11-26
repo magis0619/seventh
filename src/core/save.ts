@@ -23,7 +23,7 @@ export interface Profile {
   runCounter: number;
 }
 
-export const SAVE_KEY = 'synergy-tower-save-v1';
+export const SAVE_KEY = 'synergy-tower-save-v2';
 
 export function newProfile(rng: Rng): Profile {
   const towers = {} as Record<TowerId, TowerProgress>;
@@ -31,9 +31,9 @@ export function newProfile(rng: Rng): Profile {
   return {
     version: 1,
     loadout: [
-      makeItem(rng, { kind: 'weapon', floor: 1, quality: 1, type: '短剣', name: STARTER_WEAPON_NAME }),
+      makeItem(rng, { kind: 'weapon', floor: 1, quality: 1, type: '短剣', name: STARTER_WEAPON_NAME, skills: [...BALANCE.starter.weaponSkills] }),
       null,
-      makeItem(rng, { kind: 'armor', floor: 1, quality: 1, type: '外套', name: STARTER_ARMOR_NAME }),
+      makeItem(rng, { kind: 'armor', floor: 1, quality: 1, type: '外套', name: STARTER_ARMOR_NAME, skills: [...BALANCE.starter.armorSkills] }),
       null,
     ],
     storage: [],

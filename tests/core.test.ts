@@ -35,7 +35,7 @@ describe('計算式', () => {
     expect(e.attack).toBe(17);
     expect(e.defense).toBe(7);
     expect(e.luck).toBe(10);
-    expect(e.maxHp).toBe(65);
+    expect(e.maxHp).toBe(BALANCE.player.baseMaxHp + 25);
   });
   it('攻撃回数 = floor(速さ × 倍率)、最低1', () => {
     expect(hitsPerTurn(1, 1)).toBe(1);
@@ -68,9 +68,10 @@ describe('敵', () => {
   });
   it('敵の式（§4.3）', () => {
     expect(enemyStats(1, 'grass', false)).toEqual({ hp: 20, atk: 5, spd: 1 });
+    const E = BALANCE.enemy;
     const s = enemyStats(20, 'volcano', true);
-    expect(s.hp).toBe(Math.ceil(20 * 1.22 ** 19 * 1.5 * 4));
-    expect(s.atk).toBe(Math.ceil(5 * 1.12 ** 19 * 1.5 * 1.5));
+    expect(s.hp).toBe(Math.ceil(E.hpBase * E.hpGrowth ** 19 * 1.5 * E.bossHpMul));
+    expect(s.atk).toBe(Math.ceil(E.atkBase * E.atkGrowth ** 19 * 1.5 * E.bossAtkMul));
     expect(s.spd).toBe(2);
   });
   it('逃走失敗時は敵の攻撃を受ける', () => {
@@ -128,13 +129,14 @@ describe('スキル数の抽選確率', () => {
     return d.map((x) => x / n);
   }
   it('p の式', () => {
-    expect(skillRollP(5, false, 0)).toBeCloseTo(0.42);
-    expect(skillRollP(100, false, 0)).toBeCloseTo(0.8);
+    const b = BALANCE.skillRoll.pBase;
+    expect(skillRollP(5, false, 0)).toBeCloseTo(b + 0.02);
+    expect(skillRollP(100, false, 0)).toBeCloseTo(Math.min(0.85, b + 0.4));
     expect(skillRollP(500, true, 0)).toBe(0.85);
   });
   it('運5: 理論値どおりの分布', () => {
     const d = distribution(5);
-    const p = 0.42;
+    const p = BALANCE.skillRoll.pBase + 5 / 250;
     expect(d[0]).toBeCloseTo(1 - p, 1);
     expect(d[1]).toBeCloseTo(p * (1 - p * 0.65), 1);
   });

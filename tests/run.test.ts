@@ -1,6 +1,7 @@
+import { BALANCE } from '../src/data/balance';
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../src/core/rng';
-import { loadProfile, newProfile, saveProfile, startFloors, type KVStore } from '../src/core/save';
+import { loadProfile, newProfile, saveProfile, startFloors, SAVE_KEY, type KVStore } from '../src/core/save';
 import {
   advance,
   attack,
@@ -35,7 +36,7 @@ describe('ラン', () => {
   it('開始時は全快、進むと階が増える', () => {
     const p = newProfile(createRng(1));
     const run = startRun(p, 'grass', 1, 10);
-    expect(run.hp).toBe(40 + p.loadout[2]!.hp);
+    expect(run.hp).toBe(BALANCE.player.baseMaxHp + p.loadout[2]!.hp);
     expect(run.floor).toBe(0);
     advance(p, run);
     expect(run.floor).toBe(1);
@@ -195,7 +196,7 @@ describe('セーブ', () => {
   });
   it('壊れたデータなら新規', () => {
     const store = memStore();
-    store.setItem('synergy-tower-save-v1', '{broken');
+    store.setItem(SAVE_KEY, '{broken');
     expect(loadProfile(store, createRng(1)).bestFloor).toBe(0);
   });
 });
@@ -215,5 +216,20 @@ describe('数字の日本語単位表示', () => {
     [1.5e75, '1.50e75'],
   ])('%d → %s', (v, s) => {
     expect(formatNum(v)).toBe(s);
+  });
+});
+
+describe('逃走', () => {
+  it('逃げるとその戦闘で伸びたステータスは元に戻る', () => {
+    const p = newProfile(createRng(1));
+    const run = startRun(p, 'grass', 1, 10);
+    debugWarp(p, run, 20);
+    advance(p, run);
+    const before = run.battle!.phase.before;
+    expect(run.stats.str).toBeGreaterThan(before.str); // 初期装備の筋トレで伸びている
+    run.hp = 1e9;
+    let guard = 0;
+    while (run.status === 'battle' && guard++ < 200) escape(p, run);
+    expect(run.stats).toEqual(before);
   });
 });

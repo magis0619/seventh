@@ -6,7 +6,7 @@ export const BALANCE = {
   player: {
     /** 初期ステータス（§4.1） */
     initial: { str: 2, spd: 1, mag: 0, def: 0, luck: 5 },
-    baseMaxHp: 40,
+    baseMaxHp: 60,
     /** 会心率計算で使う運の上限（%） */
     critLuckCap: 100,
     /** 会心ダメージ倍率 = critBase + max(0, 運 - critLuckCap) / critOverDivisor */
@@ -25,9 +25,9 @@ export const BALANCE = {
 
   enemy: {
     hpBase: 20,
-    hpGrowth: 1.22,
+    hpGrowth: 1.19,
     atkBase: 5,
-    atkGrowth: 1.12,
+    atkGrowth: 1.11,
     spdBase: 1,
     spdFloorDivisor: 15,
     bossHpMul: 4,
@@ -38,14 +38,14 @@ export const BALANCE = {
   explore: {
     maxFloor: 100,
     bossInterval: 20,
-    encounterRate: 0.4,
+    encounterRate: 0.45,
     /** 非遭遇時に泉が出る確率 */
-    fountainRate: 0.08,
+    fountainRate: 0.12,
     fountainHealRatio: 0.4,
   },
 
   drop: {
-    normalBase: 0.35,
+    normalBase: 0.45,
     /** 運 1 につき +1/4 % */
     luckPerPercent: 4,
     normalMax: 0.7,
@@ -67,7 +67,7 @@ export const BALANCE = {
   },
 
   skillRoll: {
-    pBase: 0.4,
+    pBase: 0.5,
     luckDivisor: 250,
     bossBonus: 0.2,
     pMax: 0.85,
@@ -89,6 +89,13 @@ export const BALANCE = {
       [5, 3],
       [3, 2],
     ] as ReadonlyArray<readonly [number, number]>,
+  },
+
+  /** 初期装備と救済武器に付くスキル（最初の戦闘から成長を体験させる） */
+  starter: {
+    weaponSkills: ['S01', 'S05'] as const,
+    armorSkills: ['S19'] as const,
+    rescueSkills: ['S01'] as const,
   },
 
   storage: {

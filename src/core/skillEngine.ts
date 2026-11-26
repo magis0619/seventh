@@ -34,6 +34,9 @@ export type SkillEventType =
   | 'depth_limit' // 連鎖の深さ上限
   | 'cap'; // 発動回数上限
 
+/** スキルが計算に使った値 */
+export type SourceKey = StatKey | 'maxHp' | 'tag' | 'none';
+
 export interface SkillEvent {
   seq: number;
   type: SkillEventType;
@@ -41,7 +44,24 @@ export interface SkillEvent {
   ref: SkillRef | null;
   depth: number;
   changes: StatChange[];
+  /** 計算に使った値 */
+  source: SourceKey;
+  /**
+   * 連鎖: このフェーズ中に「別のスキル」が伸ばした値を使って伸びた。
+   * 例: 瞑想で増えた魔力を、魔力転換が力に流した
+   */
+  chain: boolean;
+  /** 連鎖元のスキル（chain のとき） */
+  chainFrom: SkillRef | null;
 }
+
+/** スキルが計算に使う値（UI の「魔力 → 力」表示にも使う） */
+export const SKILL_SOURCE: Record<SkillId, SourceKey> = {
+  S01: 'none', S02: 'tag', S03: 'none', S04: 'maxHp', S05: 'str', S06: 'str',
+  S07: 'none', S08: 'tag', S09: 'none', S10: 'mag', S11: 'str', S12: 'mag',
+  S13: 'none', S14: 'tag', S15: 'none', S16: 'spd', S17: 'none', S18: 'spd',
+  S19: 'none', S20: 'tag', S21: 'none', S22: 'def', S23: 'def', S24: 'none',
+};
 
 export interface Passives {
   /** 連撃を持っているか */
@@ -115,8 +135,21 @@ export function runSkillPhase(base: BaseStats, loadout: Loadout, rng: Rng): Skil
 
   const eff = () => computeEffective(stats, loadout);
 
+  /** 各ステータスを最後に伸ばしたスキル（連鎖判定用） */
+  const lastChangedBy: Partial<Record<StatKey, SkillRef>> = {};
+
   const push = (type: SkillEventType, ref: SkillRef | null, depth: number, changes: StatChange[] = []) => {
-    events.push({ seq: events.length, type, ref, depth, changes });
+    const source: SourceKey = ref ? SKILL_SOURCE[ref.skillId] : 'none';
+    let chainFrom: SkillRef | null = null;
+    if (type === 'effect' && ref && source !== 'none' && source !== 'tag' && source !== 'maxHp') {
+      const from = lastChangedBy[source];
+      // 自分自身が伸ばした値を読むのは連鎖ではない（別スキルからの流れだけ）
+      if (from && !(from.slot === ref.slot && from.index === ref.index)) chainFrom = from;
+    }
+    events.push({ seq: events.length, type, ref, depth, changes, source, chain: chainFrom !== null, chainFrom });
+    if (type === 'effect' && ref) {
+      for (const c of changes) if (c.key !== 'battleMul') lastChangedBy[c.key] = ref;
+    }
   };
 
   /** ステータス加算。スキルのタグが伸ばすステータスと一致すればタグボーナスを掛ける */
@@ -251,4 +284,26 @@ export function runSkillPhase(base: BaseStats, loadout: Loadout, rng: Rng): Skil
     truncated,
     passives: computePassives(loadout),
   };
+}
+
+export interface PhaseSummary {
+  /** 別スキルが伸ばした値を使って伸びた回数 */
+  chains: number;
+  /** 反復・共鳴による再発動で効果が出た回数 */
+  refires: number;
+  /** タグボーナスが乗った回数 */
+  tagBoosts: number;
+}
+
+export function summarizePhase(r: SkillPhaseResult): PhaseSummary {
+  let chains = 0;
+  let refires = 0;
+  let tagBoosts = 0;
+  for (const e of r.events) {
+    if (e.type !== 'effect') continue;
+    if (e.chain) chains++;
+    if (e.depth > 0) refires++;
+    if (e.changes.some((c) => c.tagMul > 1)) tagBoosts++;
+  }
+  return { chains, refires, tagBoosts };
 }

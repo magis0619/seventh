@@ -82,6 +82,7 @@ export function ensureWeapon(profile: Profile, rng: Rng): Item | null {
     quality: BALANCE.item.qualityMin,
     type: '杖',
     name: RESCUE_WEAPON_NAME,
+    skills: [...BALANCE.starter.rescueSkills],
   });
   profile.loadout[0] = stick;
   return stick;
@@ -197,6 +198,8 @@ function onBattleEnd(profile: Profile, run: RunState) {
   } else if (b.outcome === 'lose') {
     endRun(profile, run, 'defeat');
   } else if (b.outcome === 'escaped') {
+    // 逃げたらこの戦闘のスキルで伸びた分は失う（逃走→再戦で成長だけ稼ぐのを防ぐ）
+    run.stats = { ...b.phase.before };
     // 雑魚から逃げたら階は突破扱い。ボスから逃げたら次の「進む」で再戦
     if (!b.enemy.isBoss) run.floorCleared = true;
     run.status = 'explore';

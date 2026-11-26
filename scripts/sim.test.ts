@@ -10,9 +10,11 @@ import { predictEnemyDamage, predictPlayerDamage } from '../src/core/battle';
 import { combatant } from '../src/core/run';
 import type { Item, SlotIndex } from '../src/core/types';
 import { TOWER_IDS, type TowerId } from '../src/data/dungeons';
-import { formatNum } from '../src/ui/format';
 import { makeItem } from '../src/core/itemGen';
 import type { SkillId } from '../src/data/skills';
+
+/** 帰還も逃走もしない素直なプレイ */
+const NAIVE = !!process.env.NAIVE;
 
 function score(it: Item | null): number {
   if (!it) return -1;
@@ -54,14 +56,15 @@ function playRun(p: Profile, tower: TowerId, seed: number, from?: number): RunSt
   for (let step = 0; step < 5000 && run.status !== 'ended'; step++) {
     if (run.status === 'explore') {
       const max = maxHpOf(p, run);
-      if (run.hp < max * 0.3) retreat(p, run);
+      if (!NAIVE && run.hp < max * 0.3) retreat(p, run);
       else advance(p, run);
     } else if (run.status === 'battle') {
       const c = combatant(p, run);
       const b = run.battle!;
       const turnsToKill = Math.ceil(b.enemy.hp / Math.max(1, predictPlayerDamage(b, c)));
       const turnsToDie = Math.ceil(run.hp / predictEnemyDamage(b, c));
-      if (!b.enemy.isBoss && turnsToKill > turnsToDie) escape(p, run);
+      if (NAIVE) attack(p, run);
+      else if (!b.enemy.isBoss && turnsToKill > turnsToDie) escape(p, run);
       else if (b.enemy.isBoss && turnsToKill > turnsToDie && run.hp < maxHpOf(p, run)) escape(p, run);
       else attack(p, run);
       if (run.lastBattle) run.maxTurns = Math.max(run.maxTurns, run.lastBattle.turn);
@@ -78,34 +81,39 @@ function playRun(p: Profile, tower: TowerId, seed: number, from?: number): RunSt
   return run;
 }
 
+function median(xs: number[]): number {
+  const a = [...xs].sort((x, y) => x - y);
+  return a[Math.floor(a.length / 2)];
+}
+
 it('balance simulation', () => {
+  const RUNS = 40;
+  const PROFILES = 10;
   for (const tower of TOWER_IDS) {
-    const rows: string[] = [];
-    for (const profileSeed of [1, 2, 3]) {
-      const p = newProfile(createRng(profileSeed));
-      const rng = createRng(profileSeed * 1000);
+    const first: number[] = [];
+    const firstRuns: number[][] = [];
+    const boss: Record<number, number[]> = { 20: [], 40: [], 60: [] };
+    for (let ps = 1; ps <= PROFILES; ps++) {
+      const p = newProfile(createRng(ps));
+      const rng = createRng(ps * 1000);
       const reach: number[] = [];
-      let bestDmg = 0;
-      let maxTurns = 0;
-      let defeats = 0;
-      for (let r = 0; r < 80; r++) {
+      const cleared: Record<number, number> = {};
+      for (let r = 0; r < RUNS; r++) {
         ensureWeapon(p, rng);
         townEquip(p);
         const run = playRun(p, tower, Math.floor(rng.next() * 2 ** 31));
         reach.push(run.floor);
-        bestDmg = Math.max(bestDmg, run.maxDamage);
-        maxTurns = Math.max(maxTurns, run.maxTurns);
-        if (run.result === 'defeat') defeats++;
+        for (const f of [20, 40, 60]) if (cleared[f] === undefined && p.towers[tower].checkpoint > f) cleared[f] = r + 1;
       }
-      const milestones = [10, 20, 30, 40, 60, 80, 100].map((f) => {
-        const i = reach.findIndex((x) => x >= f);
-        return `${f}F:${i < 0 ? '-' : i + 1}`;
-      });
-      rows.push(
-        `  profile${profileSeed}: best ${Math.max(...reach)}F, checkpoint ${p.towers[tower].checkpoint}F, defeats ${defeats}/80, maxDmg ${formatNum(bestDmg)}, 最長戦闘 ${maxTurns}T | 初到達ラン ${milestones.join(' ')}`,
-      );
+      first.push(reach[0]);
+      firstRuns.push(reach.slice(0, 5));
+      for (const f of [20, 40, 60]) boss[f].push(cleared[f] ?? 99);
     }
-    console.log(`[${tower}]\n${rows.join('\n')}`);
+    const fmt = (xs: number[]) => (median(xs) >= 99 ? '未達' : `${median(xs)}ラン目`);
+    console.log(
+      `[${tower}] 1ラン目の到達 中央値 ${median(first)}F（${Math.min(...first)}〜${Math.max(...first)}F） | ボス突破 20F:${fmt(boss[20])} 40F:${fmt(boss[40])} 60F:${fmt(boss[60])}`,
+    );
+    console.log(`  例: 最初の5ラン ${firstRuns.slice(0, 3).map((r) => r.join('→')).join(' / ')}`);
   }
 });
 
