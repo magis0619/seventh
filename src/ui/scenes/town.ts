@@ -81,6 +81,15 @@ export function renderTown(g: Game) {
         <div class="storage-grid">${storageHtml}</div>
       </div>
       <div class="panel pane-tower">
+        ${
+          p.bestFloor < 20
+            ? `<ol class="howto">
+            <li>塔を選んで<b>出発</b>。「進む」で1階ずつ登る</li>
+            <li>戦闘が始まると<b>装備のスキルが上から順に発動</b>し、ステータスが伸びる。伸びた値はランの間ずっと残るので、<b>戦うほど強くなる</b></li>
+            <li>危なくなったら<b>戻る</b>。負けると装備中の武器を失う</li>
+          </ol>`
+            : ''
+        }
         <h2>塔を選ぶ</h2>
         ${towersHtml}
         <div class="dim" style="font-size:12px">

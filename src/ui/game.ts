@@ -9,6 +9,8 @@ import { renderBattle } from './scenes/battle';
 import { renderLoot } from './scenes/loot';
 import { renderResult } from './scenes/result';
 import { renderDebug } from './debug';
+import { close as closeDetail, openItemDetail } from './detail';
+import type { Item } from '../core/types';
 
 export type SceneId = 'town' | 'explore' | 'battle' | 'loot' | 'result';
 
@@ -61,7 +63,20 @@ export class Game {
     const seedParam = params.get('seed');
     if (seedParam) this.fixedSeed = /^\d+$/.test(seedParam) ? Number(seedParam) : hashSeed(seedParam);
     this.profile = loadProfile(this.store, createRng(Date.now() >>> 0));
+    // カードをタップすると詳細シート（ボタンのタップは除く）
+    root.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('button, select, input')) return;
+      const card = t.closest<HTMLElement>('.card[data-item]');
+      if (!card) return;
+      const item = this.findItem(card.dataset.item!);
+      if (item) openItemDetail(item);
+    });
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('sheet')) {
+        closeDetail();
+        return;
+      }
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'SELECT') return;
       const fn = this.hotkeys[e.key];
       if (fn && (!this.busy || this.busyHotkeys)) {
@@ -69,6 +84,16 @@ export class Game {
         fn();
       }
     });
+  }
+
+  findItem(id: string): Item | undefined {
+    const pool = [
+      ...this.profile.loadout,
+      ...this.profile.storage,
+      this.run?.pendingLoot ?? null,
+      ...(this.run?.lost ?? []),
+    ];
+    return pool.find((i): i is Item => !!i && i.id === id);
   }
 
   save() {
@@ -103,6 +128,7 @@ export class Game {
   }
 
   render() {
+    closeDetail();
     this.corridor?.destroy();
     this.corridor = null;
     this.hotkeys = {};

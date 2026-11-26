@@ -1,5 +1,7 @@
 import { BALANCE } from '../../data/balance';
-import { advance, retreat } from '../../core/run';
+import { advance, maxHpOf, retreat } from '../../core/run';
+import { enemyStats, isBossFloor } from '../../core/battle';
+import { computeEffective, damageTaken, hitsPerTurn } from '../../core/stats';
 import { formatNum } from '../format';
 import type { Game } from '../game';
 import { mountCorridor, playLayout, viewHtml } from './play';
@@ -22,13 +24,38 @@ function eventMessage(g: Game): string {
   }
 }
 
+/** 次の階の敵の目安と、危険度（「進むか戻るか」の判断材料） */
+function nextFloorInfo(g: Game): { html: string; danger: boolean } {
+  const run = g.run!;
+  const next = run.floorCleared ? run.floor + 1 : run.floor;
+  if (next > BALANCE.explore.maxFloor) return { html: '', danger: false };
+  const boss = isBossFloor(next);
+  const es = enemyStats(next, run.towerId, boss);
+  const eff = computeEffective(run.stats, g.profile.loadout);
+  const taken = damageTaken(es.atk, eff.defense);
+  const hits = Math.ceil(run.hp / taken);
+  const dmg = hitsPerTurn(eff.spd, 1) * eff.attack;
+  const turns = Math.ceil(es.hp / Math.max(1, dmg));
+  const danger = hits <= 3 || (boss && turns > hits);
+  const lowHp = run.hp < maxHpOf(g.profile, run) * 0.35;
+  const head = boss ? `<b class="bad">次は ${next}F ボス</b>` : `次の ${next}F の敵（目安）`;
+  const html = `<div class="next-info ${danger ? 'danger' : ''}">
+    <div>${head}：HP ${formatNum(es.hp)}／攻撃 ${formatNum(es.atk)}</div>
+    <div class="dim">今の強さで：被ダメ ${formatNum(taken)}/回（あと${formatNum(hits)}発）・撃破 約${formatNum(turns)}ターン（スキル発動前）</div>
+    ${danger || lowHp ? `<div class="warn-line">⚠ ${boss && turns > hits ? 'このままだとボスに勝てない見込み' : 'HPが危ない'} — 戻れば装備は持ち帰れる</div>` : ''}
+  </div>`;
+  return { html, danger: danger || lowHp };
+}
+
 export function renderExplore(g: Game) {
   const run = g.run!;
   const atTop = run.floorCleared && run.floor >= BALANCE.explore.maxFloor;
+  const info = nextFloorInfo(g);
   g.root.innerHTML = playLayout(g, {
     view: viewHtml(g),
-    controls: `<button class="big primary" id="go" ${atTop ? 'disabled' : ''}>進む<span class="kbd">[Space]</span></button>
-      <button class="big" id="back">戻る<span class="kbd">[Esc]</span></button>`,
+    predict: info.html,
+    controls: `<button class="big ${info.danger ? '' : 'primary'}" id="go" ${atTop ? 'disabled' : ''}>進む<span class="kbd">[Space]</span></button>
+      <button class="big ${info.danger ? 'warn' : ''}" id="back">${info.danger ? '戻る（推奨）' : '戻る'}<span class="kbd">[Esc]</span></button>`,
     note: '「戻る」で帰還：装備を持ち帰る（HP全快・成長はリセット）',
   });
   const corridor = mountCorridor(g);
